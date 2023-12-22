@@ -321,6 +321,15 @@ static void MX_GPIO_Init(void)
 }
 
 
+static void beep(void)
+{
+	htim15.Instance->CCR1 = (htim15.Init.Period / 2) + 1;
+	HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
+	HAL_Delay(100);
+	HAL_TIM_PWM_Stop(&htim15, TIM_CHANNEL_1);
+}
+
+
 /* finds the sw_t entry for a given switch */
 static sw_t *_find_sw(enum switch_e which)
 {
@@ -450,6 +459,7 @@ static void check_switch(enum switch_e sw)
 			if (HAL_GPIO_ReadPin(s->sw_port, s->sw_pin) == GPIO_PIN_RESET) {
 				s->debounce_time = 1;
 				do_switch(s);
+				beep();
 			}
 
 		/* we're debouncing. Reset the debounce time if the button isn't released. */
