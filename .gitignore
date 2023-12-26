@@ -1,0 +1,8 @@
+.mxproject
+dep/
+obj/
+linker_params.ld
+rangehood.elf
+rangehood.hex
+rangehood.lst
+rangehood.map
