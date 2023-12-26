@@ -9,7 +9,7 @@ TIM_HandleTypeDef htim15;
 UART_HandleTypeDef huart1;
 
 enum switch_e { SW_FAN_OFF, SW_FAN_L, SW_FAN_M, SW_FAN_H, SW_FAN_AUTO, SW_FILTER, SW_DELAY, SW_LIGHTS };
-enum output_e { OUT_NONE=-1, OUT_FAN_L, OUT_FAN_M, OUT_FAN_H, OUT_LIGHTS };
+enum output_e { OUT_NONE=-1, OUT_FAN_L, OUT_FAN_M, OUT_FAN_H, OUT_LIGHT_L, OUT_LIGHT_H };
 enum func_e { FUNC_FAN_OFF, FUNC_FAN_L, FUNC_FAN_M, FUNC_FAN_H, FUNC_LIGHTS_OFF, FUNC_LIGHTS_TOGGLE };
 
 typedef struct {
@@ -44,10 +44,11 @@ static sw_t switches[] = {
 };
 
 static output_t outputs[] = {
-	{ .out = OUT_FAN_L, .pp_port = OUT1_PP_GPIO_Port, .pp_pin = OUT1_PP_Pin, .oe_port = OUT1_OE_GPIO_Port, .oe_pin = OUT1_OE_Pin },
+	{ .out = OUT_FAN_L, .pp_port = OUT3_PP_GPIO_Port, .pp_pin = OUT3_PP_Pin, .oe_port = OUT3_OE_GPIO_Port, .oe_pin = OUT3_OE_Pin },
 	{ .out = OUT_FAN_M, .pp_port = OUT2_PP_GPIO_Port, .pp_pin = OUT2_PP_Pin, .oe_port = OUT2_OE_GPIO_Port, .oe_pin = OUT2_OE_Pin },
-	{ .out = OUT_FAN_H, .pp_port = OUT3_PP_GPIO_Port, .pp_pin = OUT3_PP_Pin, .oe_port = OUT3_OE_GPIO_Port, .oe_pin = OUT3_OE_Pin },
-	{ .out = OUT_LIGHTS, .pp_port = OUT4_PP_GPIO_Port, .pp_pin = OUT4_PP_Pin, .oe_port = OUT4_OE_GPIO_Port, .oe_pin = OUT4_OE_Pin },
+	{ .out = OUT_FAN_H, .pp_port = OUT1_PP_GPIO_Port, .pp_pin = OUT1_PP_Pin, .oe_port = OUT1_OE_GPIO_Port, .oe_pin = OUT1_OE_Pin },
+	{ .out = OUT_LIGHT_L, .pp_port = OUT4_PP_GPIO_Port, .pp_pin = OUT4_PP_Pin, .oe_port = OUT4_OE_GPIO_Port, .oe_pin = OUT4_OE_Pin },
+	{ .out = OUT_LIGHT_H, .pp_port = OUT5_PP_GPIO_Port, .pp_pin = OUT5_PP_Pin, .oe_port = OUT5_OE_GPIO_Port, .oe_pin = OUT5_OE_Pin },
 	{ .pp_port = NULL }
 };
 
@@ -303,12 +304,14 @@ static void MX_GPIO_Init(void)
 	GPIO_InitStruct.Pin = BEEP_N_Pin;
 	HAL_GPIO_Init(BEEP_N_GPIO_Port, &GPIO_InitStruct);
 
-	GPIO_InitStruct.Pin = FAN_L_Pin | FAN_M_Pin | FAN_AUTO_Pin | FAN_H_Pin | FAN_OFF_Pin | FILTER_Pin | LIGHTS_Pin | DELAY_Pin;
+	GPIO_InitStruct.Pin = FAN_OFF_Pin | FAN_L_Pin | FAN_M_Pin | FAN_H_Pin | FAN_AUTO_Pin | FILTER_Pin | DELAY_Pin | LIGHTS_Pin;
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = GPIO_PIN_8;
+	GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = GPIO_PIN_4 | GPIO_PIN_6 | GPIO_PIN_10 | GPIO_PIN_11;
@@ -391,17 +394,9 @@ static void set_fan(enum func_e func)
 	HAL_GPIO_WritePin(LED_H_GPIO_Port, LED_H_Pin, GPIO_PIN_RESET);
 
 	/* turn off all the fan outputs */
-	HAL_GPIO_WritePin(OUT1_OE_GPIO_Port, OUT1_OE_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT2_OE_GPIO_Port, OUT2_OE_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT3_OE_GPIO_Port, OUT3_OE_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT4_OE_GPIO_Port, OUT4_OE_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT5_OE_GPIO_Port, OUT5_OE_Pin, GPIO_PIN_RESET);
-
-	HAL_GPIO_WritePin(OUT1_PP_GPIO_Port, OUT1_PP_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT2_PP_GPIO_Port, OUT2_PP_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT3_PP_GPIO_Port, OUT3_PP_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT4_PP_GPIO_Port, OUT4_PP_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(OUT5_PP_GPIO_Port, OUT5_PP_Pin, GPIO_PIN_RESET);
+	set_output(OUT_FAN_L, false);
+	set_output(OUT_FAN_M, false);
+	set_output(OUT_FAN_H, false);
 
 	switch (func) {
 	default:		out = OUT_NONE; break;
@@ -411,14 +406,56 @@ static void set_fan(enum func_e func)
 	case FUNC_FAN_H:	out = OUT_FAN_H; break;
 	};
 
+	HAL_Delay(10);
+
 	set_output(out, true);
+}
+
+
+static void set_light(enum func_e func)
+{
+	if (func == FUNC_LIGHTS_OFF) {
+		HAL_GPIO_WritePin(LED_LIGHTS_GPIO_Port, LED_LIGHTS_Pin, GPIO_PIN_RESET);
+		set_output(OUT_LIGHT_L, false);
+		set_output(OUT_LIGHT_H, false);
+
+	} else if (func == FUNC_LIGHTS_TOGGLE) {
+		output_t *ol, *oh;
+		bool new_l, new_h;
+
+		ol = _find_output(OUT_LIGHT_L);
+		oh = _find_output(OUT_LIGHT_H);
+
+		/* the toggle moves from off -> high -> low -> off */
+		if (ol->state == false && oh->state == false) {
+			new_h = true;
+			new_l = false;
+
+		} else if (ol->state == false && oh->state == true) {
+			new_h = false;
+			new_l = true;
+
+		} else {
+			new_h = false;
+			new_l = false;
+		}
+
+		/* turn both outputs off first */
+		set_output(OUT_LIGHT_L, false);
+		set_output(OUT_LIGHT_H, false);
+
+		HAL_Delay(10);
+
+		set_output(OUT_LIGHT_L, new_l);
+		set_output(OUT_LIGHT_H, new_h);
+
+		HAL_GPIO_WritePin(LED_LIGHTS_GPIO_Port, LED_LIGHTS_Pin, (new_h | new_l));
+	}
 }
 
 
 static void do_switch(sw_t *s)
 {
-	output_t *out;
-
 	switch (s->func) {
 	case FUNC_FAN_OFF:
 	case FUNC_FAN_L:
@@ -429,14 +466,8 @@ static void do_switch(sw_t *s)
 		break;
 
 	case FUNC_LIGHTS_OFF:
-		set_output(OUT_LIGHTS, false);
-		HAL_GPIO_WritePin(s->led_port, s->led_pin, GPIO_PIN_RESET);
-		break;
-
 	case FUNC_LIGHTS_TOGGLE:
-		out = _find_output(OUT_LIGHTS);
-		set_output(OUT_LIGHTS, !out->state);
-		HAL_GPIO_WritePin(s->led_port, s->led_pin, out->state);
+		set_light(s->func);
 		break;
 
 	default:
@@ -479,8 +510,6 @@ static void check_switch(enum switch_e sw)
 
 int main(void)
 {
-	uint32_t now, next_blink;
-
 	HAL_Init();
 	SystemClock_Config();
 
@@ -490,21 +519,20 @@ int main(void)
 	MX_TIM15_Init();
 	MX_USART1_UART_Init();
 
-	next_blink = 0;
+	set_light(FUNC_LIGHTS_OFF);
+	set_fan(FUNC_FAN_OFF);
+	HAL_GPIO_WritePin(LED_OFF_GPIO_Port, LED_OFF_Pin, GPIO_PIN_SET);
+
 	while (1) {
-		now = HAL_GetTick();
+		check_switch(SW_FAN_OFF);
+		check_switch(SW_FAN_L);
+		check_switch(SW_FAN_M);
+		check_switch(SW_FAN_H);
+		check_switch(SW_FAN_AUTO);
+		check_switch(SW_FILTER);
+		check_switch(SW_DELAY);
+		check_switch(SW_LIGHTS);
 
-		if (now > next_blink) {
-			check_switch(SW_FAN_OFF);
-			check_switch(SW_FAN_L);
-			check_switch(SW_FAN_M);
-			check_switch(SW_FAN_H);
-			check_switch(SW_FAN_AUTO);
-			check_switch(SW_FILTER);
-			check_switch(SW_DELAY);
-			check_switch(SW_LIGHTS);
-
-			next_blink = now + 5;
-		}
+		HAL_Delay(50);
 	};
 }
