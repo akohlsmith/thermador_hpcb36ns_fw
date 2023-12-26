@@ -3,6 +3,8 @@
 
 #include "main.h"
 
+//#define LOW_POWER
+
 ADC_HandleTypeDef hadc1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim15;
@@ -305,7 +307,11 @@ static void MX_GPIO_Init(void)
 	HAL_GPIO_Init(BEEP_N_GPIO_Port, &GPIO_InitStruct);
 
 	GPIO_InitStruct.Pin = FAN_OFF_Pin | FAN_L_Pin | FAN_M_Pin | FAN_H_Pin | FAN_AUTO_Pin | FILTER_Pin | DELAY_Pin | LIGHTS_Pin;
+#ifdef LOW_POWER
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+#else
 	GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+#endif
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -321,6 +327,13 @@ static void MX_GPIO_Init(void)
 
 	GPIO_InitStruct.Pin = GPIO_PIN_10;
 	HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+#ifdef LOW_POWER
+	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+	HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+	HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+#endif
 }
 
 
@@ -478,8 +491,10 @@ static void do_switch(sw_t *s)
 }
 
 
+/* returns nonzero if we should not sleep (i.e. we are busy debouncing) */
 static void check_switch(enum switch_e sw)
 {
+	int ret;
 	sw_t *s;
 
 	if ((s = _find_sw(sw))) {
@@ -534,6 +549,11 @@ int main(void)
 		check_switch(SW_DELAY);
 		check_switch(SW_LIGHTS);
 
+#ifdef LOW_POWER
+		HAL_SuspendTick();
+		HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+#else
 		HAL_Delay(50);
+#endif
 	};
 }
