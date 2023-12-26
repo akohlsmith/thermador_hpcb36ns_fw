@@ -363,6 +363,7 @@ static output_t *_find_output(enum output_e which)
 }
 
 
+/* if 74LS125s are used, OE is active-high. 74LS126 OE is active-low */
 static void set_output(enum output_e which, bool state)
 {
 	output_t *o;
@@ -371,12 +372,12 @@ static void set_output(enum output_e which, bool state)
 /* push-pull */
 #if 1
 		HAL_GPIO_WritePin(o->pp_port, o->pp_pin, (state) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(o->oe_port, o->oe_pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(o->oe_port, o->oe_pin, GPIO_PIN_RESET);
 
 /* open-drain */
 #else
 		HAL_GPIO_WritePin(o->pp_port, o->pp_pin, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(o->oe_port, o->oe_pin, (state) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(o->oe_port, o->oe_pin, (state) ? GPIO_PIN_RESET : GPIO_PIN_SET);
 #endif
 		o->state = state;
 	}
