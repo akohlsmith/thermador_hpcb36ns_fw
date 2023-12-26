@@ -133,7 +133,7 @@ INCS      += -I$(PTPD_DIR)/src/xdep
 LIBS       = -L$(CMSIS_DIR)/Lib
 
 # Compiler flags
-CFLAGS     = -Wall -g -std=gnu11 -Og
+CFLAGS     = -Wall -g -std=gnu11 -O0
 CFLAGS    += -Wno-unused-variable -Wno-unused-function
 CFLAGS    += -mlittle-endian -mcpu=cortex-m7 -mthumb
 CFLAGS    += -fstack-usage
