@@ -18,6 +18,10 @@ How the outputs were used ended up being pretty simple: Three of the outputs sel
 
 The firmware is set up in a way that allows me to easily change the function of any switch or output. It's perhaps a little over-engineered but that's the way I like it. The buttons and outputs can be remapped by editing the `switches` or `outputs` arrays at the top of `main.c`, without any change requred in the rest of the code. This was handy during the initial figuring out of which output mapped to which fan or light selection.
 
+## LEDs
+
+The LED circuit might be a little odd to some of you; I'm using the bipolar transistors as constant current sinks; In this configuration the STM32 is only supplying a tiny amount of current and the transistor does the rest of the heavy lifting. With this, all of the LED current comes from the 5V supply and not from my tiny 3.3V LDO. In fact, the 5V supply does not even have to be regulated to provide a steady LED brightness; the transistor will vary its voltage drop to maintain the desired current (5mA in this case).
+
 ## Periperhal Initialization
 
 TIM2 is used as a differential PWM timer for the beeper, and TIM15 is used for LED dimming (a feature I never really used). I do set up ADC1 for the temperature sensor as explained above, but that feature is unused, and USART1 is set up as a debug UART which was helpful during development. The GPIO is then initialized according to the `switches` and `outputs` arrays (see above). The initial system state (fans off, lights off) is set and that's about it for initialization. 
