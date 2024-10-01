@@ -12,17 +12,19 @@ There are five outputs on the original control board which drive the fan module 
 
 Since I wasn't 100% sure how these needed to be driven, I elected to use a pair of 74LS125 buffer/driver ICs which would serve three functions: provide 3.3V to 5V level translation, do the "heavy lifting" in case the output signals needed to drive heavier loads than the STM32 might be able to do on its own, and finally, to act as "sacrificial" components in case something went wrong.
 
-How the outputs were used ended up being pretty simple: Three of the outputs select the fan speed. Only one output is active at a time. The last two outputs are for the range hood lights, with one output being active for "high" and the other for "low" illumination. All of the outputs are push-pull (i.e. they output 5V when "active" and 0V when "inactive").
+How the outputs were used ended up being pretty simple: Three of the outputs select the fan speed. Only one output is active at a time. The last two outputs are for the range hood lights, with one output being active for "high" and the other for "low" illumination. All of the outputs are active-high and push-pull (i.e. they output 5V when "active" and 0V when "inactive").
 
 ## Switches and Outputs
 
 The firmware is set up in a way that allows me to easily change the function of any switch or output. It's perhaps a little over-engineered but that's the way I like it. The buttons and outputs can be remapped by editing the `switches` or `outputs` arrays at the top of `main.c`, without any change requred in the rest of the code. This was handy during the initial figuring out of which output mapped to which fan or light selection.
 
+The outputs are configured for push-pull operation; I had originally intended to make each individual output either push-pull or open-collector but in the end this wasn't necessary. the `set_output()` function has an `#if 1 ... #else ... #endif` block which configures push-pull or open-collector operation.
+
 ## LEDs
 
 The LED circuit might be a little odd to some of you; I'm using the bipolar transistors as constant current sinks; In this configuration the STM32 is only supplying a tiny amount of current and the transistor does the rest of the heavy lifting. With this, all of the LED current comes from the 5V supply and not from my tiny 3.3V LDO. In fact, the 5V supply does not even have to be regulated to provide a steady LED brightness; the transistor will vary its voltage drop to maintain the desired current (5mA in this case).
 
-## Periperhal Initialization
+## Peripheral Initialization
 
 TIM2 is used as a differential PWM timer for the beeper, and TIM15 is used for LED dimming (a feature I never really used). I do set up ADC1 for the temperature sensor as explained above, but that feature is unused, and USART1 is set up as a debug UART which was helpful during development. The GPIO is then initialized according to the `switches` and `outputs` arrays (see above). The initial system state (fans off, lights off) is set and that's about it for initialization. 
 
