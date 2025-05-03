@@ -2,9 +2,9 @@
 
 This repo contains the STM32G474 source code for a replacement PCB I designed for the Thermador HPCB36NS/01 range hood. I could find the wiring diagram for the fan module but unfortunately the diagram did not include any explantion of how the control signals worked. The original control PCB had already been replaced once a couple of years earlier and for the same failure, and I was not looking at replacing it again, as the PCB was becoming difficult to source and even when it was available, it cost $300.
 
-My original request for help on understanding how the fan module operated was posted on [Reddit](https://www.reddit.com/r/appliancerepair/comments/17rnkx2/thermador_range_hood_control_board_failed_just/) around September 2023. Unfortunately since the control board was failing I could not take direct measurements of how it operated its control outputs. I could, however make some estimated guesses.
+My original request for help on understanding how the fan module operated was posted on [Reddit](https://www.reddit.com/r/appliancerepair/comments/17rnkx2/thermador_range_hood_control_board_failed_just/) around September 2023. Unfortunately since the control board was failing I could not take direct measurements of how it operated its control outputs. I could, however make some educated guesses.
 
-I ended up designing my own control board, intended to be a straight-up replacement of the original PCB. Through some incredible failure on my part around the reading a damned ruler, my PCB ended up being too large to be a simple replacement. I ended up cutting some components off of the original board so that it was just a correctly-fitting "dummy" and wiring the signals from the original PCB to my own PCB. Ugly, but functional. Story of my life. :-)
+I ended up designing my own control board, intended to be a straight-up replacement of the original PCB. Through some incredible failure on my part around the reading of a damned ruler, my PCB ended up being too large to be a simple replacement. I ended up cutting some components off of the original board so that it was just a correctly-fitting "dummy" and wiring the signals from the original PCB to my own PCB. Ugly, but functional. Story of my life. :-)
 
 # Theory of Operation
 
