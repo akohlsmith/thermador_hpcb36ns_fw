@@ -535,9 +535,21 @@ int main(void)
 	MX_TIM15_Init();
 	MX_USART1_UART_Init();
 
+	/* set initial state */
 	set_light(FUNC_LIGHTS_OFF);
 	set_fan(FUNC_FAN_OFF);
 	HAL_GPIO_WritePin(LED_OFF_GPIO_Port, LED_OFF_Pin, GPIO_PIN_SET);
+
+	/*
+	 * wait a second before starting the main loop to prevent
+	 * "stuttering" with weak power supplies causing brownouts
+	 */
+	HAL_Delay(1000);
+
+	/* beep twice to indicate the system is ready */
+	beep();
+	HAL_Delay(10);
+	beep();
 
 	while (1) {
 		check_switch(SW_FAN_OFF);
