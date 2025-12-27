@@ -1,0 +1,4 @@
+loadfile rangehood.hex
+r
+go
+q
